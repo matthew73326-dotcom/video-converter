@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roblox VideoData Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --panel: #121a28;
+    --panel-2: #172133;
+    --line: #253049;
+    --text: #e8edf6;
+    --muted: #8391aa;
+    --accent: #f59e3b;
+    --accent-2: #ffb85c;
+    --good: #3ddc84;
+    --warn: #ffc94d;
+    --bad: #ff6b6b;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: radial-gradient(1200px 600px at 50% -200px, #18233a 0%, var(--bg) 60%); color: var(--text);
+    font: 14px/1.45 Inter, system-ui, -apple-system, Segoe UI, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 48px; }
+  header { display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 22px; }
+  header .title { text-align: center; }
+  h1 { font-family: Fredoka, Inter, sans-serif; font-weight: 700; font-size: 28px; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .pill { position: absolute; right: 0; top: 4px; display: flex; align-items: center; gap: 8px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; font-weight: 600; font-family: Fredoka, Inter, sans-serif; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .pill.busy .dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .pill.done .dot { background: var(--good); box-shadow: 0 0 10px var(--good); }
+  .pill.err .dot { background: var(--bad); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .pill { position: static; margin-left: 12px; } header { justify-content: space-between; } header .title { text-align: left; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .card h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 4px; font-weight: 600; }
+  .card .hint { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+  .vh { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; opacity: 0; }
+  .jswarn { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.4); color: #ffc9c9; border-radius: 11px; padding: 10px 12px; margin-bottom: 14px; font-size: 12.5px; }
+  .drop { display: block; border: 1.5px dashed #3a4866; border-radius: 12px; padding: 30px 16px; text-align: center; cursor: pointer; transition: .15s; background: rgba(255,255,255,.01); }
+  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(245,158,59,.06); }
+  .drop .icon { display: grid; width: 40px; height: 40px; border-radius: 10px; margin: 0 auto 10px; display: grid; place-items: center;
+    background: linear-gradient(160deg, var(--accent-2), #c96f16); color: #2b1600; font-weight: 700; font-family: Fredoka, sans-serif; font-size: 20px; }
+  .drop b { display: block; font-size: 14px; }
+  .drop > span:last-child { color: var(--muted); font-size: 12px; }
+  .fileinfo { margin-top: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; color: var(--muted); min-height: 38px; }
+  .fileinfo strong { color: var(--text); font-weight: 600; }
+  .label { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid #34425f; background: #1b2539; color: var(--text); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+    font-family: Fredoka, Inter, sans-serif; font-weight: 600; font-size: 13.5px; transition: .12s; }
+  .chip:hover { border-color: #51617f; }
+  .chip.on { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #2a1600; border-color: transparent; box-shadow: 0 4px 16px rgba(245,158,59,.25); }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .field label { display: block; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  input[type=number], select { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid #2c3956; border-radius: 9px; padding: 8px 10px; font: inherit; }
+  input[type=number]:focus, select:focus { outline: none; border-color: var(--accent); }
+  .field small { color: var(--muted); font-size: 11.5px; display: block; margin-top: 5px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 10px; padding: 11px 18px; font-family: Fredoka, Inter, sans-serif;
+    font-weight: 600; font-size: 15px; cursor: pointer; transition: .12s; }
+  .btn.primary { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #2a1600; box-shadow: 0 6px 20px rgba(245,158,59,.22); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.ghost { background: #1d2740; color: var(--text); border: 1px solid #34425f; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; filter: none; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; }
+  .stat .k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stat .v { font-family: Fredoka, Inter, sans-serif; font-weight: 600; font-size: 21px; margin-top: 2px; white-space: nowrap; }
+  .stat .s { font-size: 11.5px; color: var(--muted); }
+  .v.good { color: var(--good); } .v.warn { color: var(--warn); } .v.bad { color: var(--bad); }
+  .progress { margin-top: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px; padding: 12px; }
+  .progress .row { display: flex; justify-content: space-between; font-weight: 600; font-size: 13px; }
+  .progress .row span:last-child { color: var(--muted); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+  .bar { height: 6px; background: #22304a; border-radius: 99px; margin-top: 10px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .15s; }
+  .preview { margin-top: 12px; background: #000; border: 1px solid var(--line); border-radius: 11px; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; position: relative; }
+  .preview canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .preview .empty { position: absolute; color: #4b5a78; font-size: 12px; }
+  .log { margin-top: 12px; background: #0d1422; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; height: 132px; overflow: auto;
+    font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #aab6cc; white-space: pre-wrap; }
+  .log .w { color: var(--warn); } .log .e { color: var(--bad); } .log .g { color: var(--good); }
+  .notice { margin-top: 12px; border-radius: 11px; padding: 10px 12px; font-size: 12.5px; display: none; }
+  .notice.warn { display: block; background: rgba(255,201,77,.08); border: 1px solid rgba(255,201,77,.35); color: #ffe2a0; }
+  .howto { margin-top: 16px; }
+  .howto ol { margin: 8px 0 0; padding-left: 20px; color: #cfd7e6; }
+  .howto li { margin: 4px 0; }
+  .howto code { background: #1d2740; border: 1px solid #2c3956; border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+  .howto p { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1>Roblox VideoData Converter</h1>
+      <div class="sub">Turns a video into a <b>VideoData</b> module you can import straight into Studio. Runs entirely in your browser.</div>
+    </div>
+    <div class="pill" id="pill"><span class="dot"></span><span id="pillText">Starting&hellip;</span></div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Input</h2>
+      <p class="hint">Drop a video file here or click to browse.</p>
+      <div class="jswarn" id="jswarn">The converter's script hasn't started. If you're looking at this in the Carrd editor, publish the site and try it there, because embeds only run on the published site.</div>
+      <label class="drop" id="drop" for="file">
+        <span class="icon">&#9654;</span>
+        <b>Drag &amp; drop a video file</b>
+        <span>or click to browse &middot; MP4, WEBM, MOV&hellip;</span>
+      </label>
+      <input type="file" id="file" class="vh">
+      <div class="fileinfo" id="fileinfo">No file selected</div>
+
+      <div class="label">Presets</div>
+      <div class="presets" id="presets">
+        <button class="chip" data-p="small">Small</button>
+        <button class="chip on" data-p="balanced">Balanced</button>
+        <button class="chip" data-p="high">High</button>
+        <button class="chip" data-p="cylinder">Cylinder wide</button>
+      </div>
+
+      <div class="label">Settings</div>
+      <div class="fields">
+        <div class="field"><label for="fps">FPS</label>
+          <select id="fps"><option>10</option><option>12</option><option selected>15</option><option>20</option><option>24</option><option>30</option></select></div>
+        <div class="field"><label for="fit">Fit</label>
+          <select id="fit"><option value="crop">Crop to fill</option><option value="stretch">Stretch</option><option value="letterbox">Letterbox (black bars)</option></select></div>
+        <div class="field"><label for="w">Width (pixels)</label><input type="number" id="w" min="8" max="1024" value="192"></div>
+        <div class="field"><label for="h">Height (pixels)</label><input type="number" id="h" min="8" max="1024" value="108"></div>
+        <div class="field"><label for="start">Start at (seconds)</label><input type="number" id="start" min="0" step="0.1" value="0"></div>
+        <div class="field"><label for="max">Max seconds</label><input type="number" id="max" min="1" step="1" value="30"></div>
+        <div class="field" style="grid-column: 1 / -1"><label for="flicker">Flicker filter</label>
+          <select id="flicker">
+            <option value="0">Off &ndash; exact colours (largest file)</option>
+            <option value="1" selected>Light &ndash; ignore tiny colour changes (recommended)</option>
+            <option value="2">Medium &ndash; smaller file, slight colour lag</option>
+            <option value="3">Strong &ndash; smallest file, visible smearing</option>
+          </select>
+          <small>Skips pixels whose colour barely changed between frames. This is what keeps long videos small.</small></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="convert" disabled>Convert video</button>
+        <button class="btn ghost" id="cancel" disabled>Cancel</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Output</h2>
+      <p class="hint">Progress, file size and a preview of what will play in Roblox.</p>
+      <div class="stats">
+        <div class="stat"><div class="k">Grid</div><div class="v" id="sGrid">192 &times; 108</div><div class="s" id="sGridS">20,736 pixels per frame</div></div>
+        <div class="stat"><div class="k">File size</div><div class="v" id="sSize">&ndash;</div><div class="s" id="sSizeS">estimated when converting</div></div>
+        <div class="stat"><div class="k">Length</div><div class="v" id="sLen">&ndash;</div><div class="s" id="sLenS">frames</div></div>
+      </div>
+      <div class="progress">
+        <div class="row"><span id="pText">Ready</span><span id="pTag">Idle</span></div>
+        <div class="bar"><i id="pBar"></i></div>
+      </div>
+      <div class="preview" id="previewBox"><span class="empty" id="previewEmpty">Preview appears while converting</span><canvas id="preview"></canvas></div>
+      <div class="notice" id="notice"></div>
+      <div class="actions">
+        <button class="btn primary" id="download" disabled>Download VideoData.rbxm</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <section class="card howto">
+    <h2>Using it in Roblox Studio</h2>
+    <ol>
+      <li>Convert your video and download <code>VideoData.rbxm</code>.</li>
+      <li>In Studio, find your <code>VideoPlayer</code> script and delete the old <code>VideoData</code> inside it.</li>
+      <li>Right-click <code>VideoPlayer</code> &rarr; <b>Insert from File&hellip;</b> &rarr; pick <code>VideoData.rbxm</code>.</li>
+      <li>Press Play.</li>
+    </ol>
+    <p>The video is split into lots of small <code>Part</code> modules inside <code>VideoData</code> so Studio doesn't choke on one huge script. Every player downloads the whole file when they join, so try to keep it under about 20 MB. Lower the resolution or length, or raise the flicker filter, to shrink it. For a cylinder, use a wide shape (e.g. 192 &times; 64) so it isn't stretched.</p>
+  </section>
+</div>
+
+<script>
+// ======================= CORE (no DOM) =======================
+// CORE-START
+const PART_CHARS = 400000; // base64 characters per Part module (multiple of 4)
+
+class ByteWriter {
+  constructor(size = 1 << 20) { this.buf = new Uint8Array(size); this.len = 0; }
+  ensure(n) {
+    if (this.len + n <= this.buf.length) return;
+    let cap = this.buf.length * 2;
+    while (cap < this.len + n) cap *= 2;
+    const nb = new Uint8Array(cap); nb.set(this.buf.subarray(0, this.len)); this.buf = nb;
+  }
+  u8(v) { this.ensure(1); this.buf[this.len++] = v; }
+  varint(v) { this.ensure(10); while (v >= 128) { this.buf[this.len++] = (v % 128) | 128; v = Math.floor(v / 128); } this.buf[this.len++] = v; }
+  bytes(a) { this.ensure(a.length); this.buf.set(a, this.len); this.len += a.length; }
+  out() { return this.buf.subarray(0, this.len); }
+}
+
+function varintSize(v) { let n = 1; while (v >= 128) { v = Math.floor(v / 128); n++; } return n; }
+
+// Encodes frames into the VideoDelta stream used by the Roblox player:
+//   varint numFrames, varint totalFrames, then per stored frame:
+//   varint step, u8 kind (0 = full, 1 = delta), payload.
+// Colours are 12-bit RGB444, packed two per 3 bytes.
+class DeltaEncoder {
+  constructor(W, H, threshold) {
+    this.W = W; this.H = H; this.g = W * H; this.t = threshold | 0;
+    this.shown = new Int16Array(this.g).fill(-1);
+    this.body = new ByteWriter(1 << 20);
+    this.stored = 0; this.total = 0; this.lastStoredAt = 0;
+    this.changed = new Int32Array(this.g);
+    this.fullCount = 0;
+  }
+  // colours: Uint16Array/Int array of length g with 12-bit values
+  addFrame(colors) {
+    const g = this.g, t = this.t, shown = this.shown, ch = this.changed;
+    const index = this.total++;
+    let count = 0, cost = 0, last = -1;
+    if (this.stored > 0) {
+      for (let i = 0; i < g; i++) {
+        const a = colors[i], b = shown[i];
+        if (a === b) continue;
+        if (t > 0) {
+          const dr = Math.abs((a >> 8) - (b >> 8)), dg = Math.abs(((a >> 4) & 15) - ((b >> 4) & 15)), db = Math.abs((a & 15) - (b & 15));
+          if (dr <= t && dg <= t && db <= t) continue;
+        }
+        ch[count++] = i; cost += varintSize(i - last - 1); last = i;
+      }
+      if (count === 0) return false; // nothing changed: skip, the previous frame stays on screen
+    }
+    const fullCost = Math.ceil(g / 2) * 3;
+    cost += varintSize(count) + Math.ceil(count / 2) * 3;
+    const step = this.stored === 0 ? index : index - this.lastStoredAt;
+    const w = this.body;
+    w.varint(step);
+    if (this.stored === 0 || cost >= fullCost) {
+      w.u8(0);
+      w.ensure(fullCost);
+      for (let i = 0; i < g; i += 2) {
+        const a = colors[i], b = i + 1 < g ? colors[i + 1] : 0;
+        const v = a * 4096 + b;
+        w.buf[w.len++] = v >> 16; w.buf[w.len++] = (v >> 8) & 255; w.buf[w.len++] = v & 255;
+        shown[i] = a; if (i + 1 < g) shown[i + 1] = b;
+      }
+      this.fullCount++;
+    } else {
+      w.u8(1);
+      w.varint(count);
+      let prev = -1;
+      for (let k = 0; k < count; k++) { const i = ch[k]; w.varint(i - prev - 1); prev = i; }
+      w.ensure(Math.ceil(count / 2) * 3);
+      for (let k = 0; k < count; k += 2) {
+        const i1 = ch[k], a = colors[i1];
+        let b = 0;
+        shown[i1] = a;
+        if (k + 1 < count) { const i2 = ch[k + 1]; b = colors[i2]; shown[i2] = b; }
+        const v = a * 4096 + b;
+        w.buf[w.len++] = v >> 16; w.buf[w.len++] = (v >> 8) & 255; w.buf[w.len++] = v & 255;
+      }
+    }
+    this.stored++; this.lastStoredAt = index;
+    return true;
+  }
+  finish() {
+    const head = new ByteWriter(16);
+    head.varint(this.stored); head.varint(this.total);
+    const body = this.body.out();
+    const all = new Uint8Array(head.len + body.length);
+    all.set(head.out(), 0); all.set(body, head.len);
+    return all;
+  }
+}
+
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function base64Of(bytes) {
+  const CH = 3 * 8192;
+  const parts = [];
+  for (let i = 0; i < bytes.length; i += CH) {
+    const sub = bytes.subarray(i, Math.min(i + CH, bytes.length));
+    parts.push(btoa(String.fromCharCode.apply(null, sub)));
+  }
+  return parts.join("");
+}
+
+// Splits the binary stream into base64 parts of PART_CHARS characters.
+function base64Parts(bytes) {
+  const bytesPerPart = PART_CHARS / 4 * 3;
+  const out = [];
+  for (let i = 0; i < bytes.length; i += bytesPerPart) {
+    out.push(base64Of(bytes.subarray(i, Math.min(i + bytesPerPart, bytes.length))));
+  }
+  return out;
+}
+
+function videoDataSource(W, H, FPS, n) {
+  const w = String(n).length;
+  const pad = (i) => String(i).padStart(w, "0");
+  return [
+    "-- Video data, split across child ModuleScripts (Part" + pad(1) + "..Part" + pad(n) + ") so no",
+    "-- single script is huge. Returns Width/Height/FPS plus Parts (the base64 text,",
+    "-- in order). Reading .P still works (joined on first access) for older players.",
+    "local COUNT = " + n,
+    "local parts = table.create(COUNT)",
+    "for i = 1, COUNT do",
+    "\tparts[i] = require(script:WaitForChild(string.format(\"Part%0" + w + "d\", i)))",
+    "end",
+    "",
+    "return setmetatable({",
+    "\tWidth = " + W + ",",
+    "\tHeight = " + H + ",",
+    "\tFPS = " + FPS + ",",
+    "\tParts = parts,",
+    "}, {",
+    "\t__index = function(t, k)",
+    "\t\tif k == \"P\" then",
+    "\t\t\tlocal p = table.concat(parts)",
+    "\t\t\trawset(t, \"P\", p)",
+    "\t\t\treturn p",
+    "\t\tend",
+    "\t\treturn nil",
+    "\tend,",
+    "})",
+    "",
+  ].join("\n");
+}
+
+// ---- LZ4 block compressor (for .rbxm chunks) ----
+function lz4Compress(src) {
+  const n = src.length;
+  const out = new Uint8Array(n + Math.ceil(n / 255) + 32);
+  let op = 0, anchor = 0, ip = 0;
+  const table = new Int32Array(1 << 16).fill(-1);
+  const limit = n - 12;
+  const writeLen = (l) => { while (l >= 255) { out[op++] = 255; l -= 255; } out[op++] = l; };
+  while (ip < limit) {
+    const seq = src[ip] | (src[ip + 1] << 8) | (src[ip + 2] << 16) | (src[ip + 3] << 24);
+    const h = Math.imul(seq, 2654435761) >>> 16;
+    const ref = table[h]; table[h] = ip;
+    if (ref >= 0 && ip - ref < 65536 && src[ref] === src[ip] && src[ref + 1] === src[ip + 1] && src[ref + 2] === src[ip + 2] && src[ref + 3] === src[ip + 3]) {
+      let mlen = 4;
+      const maxEnd = n - 5;
+      while (ip + mlen < maxEnd && src[ref + mlen] === src[ip + mlen]) mlen++;
+      const lit = ip - anchor, tokenPos = op++;
+      let token = (lit >= 15 ? 15 : lit) << 4;
+      if (lit >= 15) writeLen(lit - 15);
+      out.set(src.subarray(anchor, ip), op); op += lit;
+      const off = ip - ref; out[op++] = off & 255; out[op++] = off >> 8;
+      const ml = mlen - 4; token |= ml >= 15 ? 15 : ml;
+      if (ml >= 15) writeLen(ml - 15);
+      out[tokenPos] = token;
+      ip += mlen; anchor = ip;
+    } else ip++;
+  }
+  const lit = n - anchor, tokenPos = op++;
+  out[tokenPos] = (lit >= 15 ? 15 : lit) << 4;
+  if (lit >= 15) writeLen(lit - 15);
+  out.set(src.subarray(anchor), op); op += lit;
+  return out.subarray(0, op);
+}
+
+// ---- .rbxm (binary Roblox model) writer ----
+function rbxmModuleTree(rootName, rootSource, children) {
+  // children: [{name, source}] all parented to the root. All are ModuleScripts.
+  const enc = new TextEncoder();
+  const names = [rootName, ...children.map(c => c.name)].map(s => enc.encode(s));
+  const sources = [rootSource, ...children.map(c => c.source)].map(s => enc.encode(s));
+  const count = names.length;
+
+  const u32 = (v) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); return b; };
+  const concat = (arrs) => { let n = 0; for (const a of arrs) n += a.length; const o = new Uint8Array(n); let p = 0; for (const a of arrs) { o.set(a, p); p += a.length; } return o; };
+  const str = (b) => concat([u32(b.length), b]);
+  const refs = (vals) => { // delta + zigzag + byte-interleaved big-endian i32
+    const n = vals.length, o = new Uint8Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const d = i === 0 ? vals[0] : vals[i] - vals[i - 1];
+      const z = ((d << 1) ^ (d >> 31)) >>> 0;
+      o[i] = z >>> 24; o[n + i] = (z >>> 16) & 255; o[2 * n + i] = (z >>> 8) & 255; o[3 * n + i] = z & 255;
+    }
+    return o;
+  };
+  const chunk = (name, data, compress = true) => {
+    const head = new Uint8Array(16);
+    head.set(new TextEncoder().encode(name).subarray(0, 4), 0);
+    const dv = new DataView(head.buffer);
+    if (compress) {
+      const c = lz4Compress(data);
+      dv.setUint32(4, c.length, true); dv.setUint32(8, data.length, true);
+      return [head, c];
+    }
+    dv.setUint32(4, 0, true); dv.setUint32(8, data.length, true);
+    return [head, data];
+  };
+
+  const ids = [...Array(count).keys()];
+  const header = new Uint8Array(32);
+  header.set([0x3C,0x72,0x6F,0x62,0x6C,0x6F,0x78,0x21,0x89,0xFF,0x0D,0x0A,0x1A,0x0A], 0);
+  const hv = new DataView(header.buffer);
+  hv.setUint16(14, 0, true); hv.setInt32(16, 1, true); hv.setInt32(20, count, true);
+
+  const pieces = [header];
+  pieces.push(...chunk("INST", concat([u32(0), str(enc.encode("ModuleScript")), new Uint8Array([0]), u32(count), refs(ids)])));
+  pieces.push(...chunk("PROP", concat([u32(0), str(enc.encode("Name")), new Uint8Array([1]), ...names.map(str)])));
+  // Source values can be huge: build the PROP payload directly
+  let srcLen = 4 + 4 + 6 + 1; for (const s of sources) srcLen += 4 + s.length;
+  const srcProp = new Uint8Array(srcLen); let p = 0;
+  const put = (a) => { srcProp.set(a, p); p += a.length; };
+  put(u32(0)); put(str(enc.encode("Source"))); put(new Uint8Array([1]));
+  for (const s of sources) { put(u32(s.length)); put(s); }
+  pieces.push(...chunk("PROP", srcProp));
+  pieces.push(...chunk("PRNT", concat([new Uint8Array([0]), u32(count), refs(ids), refs([-1, ...Array(count - 1).fill(0)])])));
+  pieces.push(...chunk("END\0", new TextEncoder().encode("</roblox>"), false));
+  return new Blob(pieces, { type: "application/octet-stream" });
+}
+
+function buildVideoDataRbxm(stream, W, H, FPS) {
+  const parts = base64Parts(stream);
+  const w = String(parts.length).length;
+  const children = parts.map((p, i) => ({ name: "Part" + String(i + 1).padStart(w, "0"), source: "return [==[" + p + "]==]" }));
+  return { blob: rbxmModuleTree("VideoData", videoDataSource(W, H, FPS, parts.length), children), partCount: parts.length };
+}
+
+// RGBA (canvas) -> 12-bit RGB444
+function quantize(rgba, out) {
+  for (let i = 0, j = 0; j < out.length; i += 4, j++) {
+    out[j] = (((rgba[i] * 15 + 127) / 255) | 0) << 8 | (((rgba[i + 1] * 15 + 127) / 255) | 0) << 4 | (((rgba[i + 2] * 15 + 127) / 255) | 0);
+  }
+  return out;
+}
+// CORE-END
+
+// ======================= UI =======================
+const $ = (id) => document.getElementById(id);
+const PRESETS = {
+  small:    { w: 128, h: 72,  fps: 15, flicker: 1 },
+  balanced: { w: 192, h: 108, fps: 15, flicker: 1 },
+  high:     { w: 256, h: 144, fps: 15, flicker: 1 },
+  cylinder: { w: 192, h: 64,  fps: 15, flicker: 1 },
+};
+let file = null, videoEl = null, objectUrl = null, cancelled = false, result = null, busy = false;
+
+function log(msg, cls) {
+  const line = document.createElement("div");
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  $("log").appendChild(line);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+function setPill(text, state) { $("pillText").textContent = text; $("pill").className = "pill " + (state || ""); }
+function setProgress(frac, text, tag) { $("pBar").style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + "%"; if (text) $("pText").textContent = text; if (tag) $("pTag").textContent = tag; }
+function fmtBytes(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : (b / 1024).toFixed(0) + " KB"; }
+function fmtTime(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+function clampInt(v, lo, hi, d) { v = parseInt(v, 10); if (!isFinite(v)) v = d; return Math.max(lo, Math.min(hi, v)); }
+
+function settings() {
+  return {
+    W: clampInt($("w").value, 8, 1024, 192),
+    H: clampInt($("h").value, 8, 1024, 108),
+    FPS: clampInt($("fps").value, 1, 60, 15),
+    fit: $("fit").value,
+    start: Math.max(0, parseFloat($("start").value) || 0),
+    max: Math.max(1, parseFloat($("max").value) || 30),
+    flicker: clampInt($("flicker").value, 0, 3, 1),
+  };
+}
+function sizeClass(bytes) { return bytes > 30 * 1048576 ? "bad" : bytes > 15 * 1048576 ? "warn" : "good"; }
+
+function refreshStats() {
+  const s = settings();
+  $("sGrid").innerHTML = s.W + " &times; " + s.H;
+  $("sGridS").textContent = (s.W * s.H).toLocaleString() + " pixels per frame";
+  if (videoEl && isFinite(videoEl.duration)) {
+    const len = Math.max(0, Math.min(s.max, videoEl.duration - s.start));
+    $("sLen").textContent = fmtTime(len);
+    $("sLenS").textContent = Math.floor(len * s.FPS).toLocaleString() + " frames at " + s.FPS + " FPS";
+  }
+}
+["w", "h", "fps", "start", "max", "fit", "flicker"].forEach(id => $(id).addEventListener("input", () => {
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
+  refreshStats();
+}));
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  const p = PRESETS[c.dataset.p];
+  $("w").value = p.w; $("h").value = p.h; $("fps").value = p.fps; $("flicker").value = p.flicker;
+  document.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c));
+  refreshStats();
+}));
+
+const drop = $("drop");
+const dropArea = drop.closest(".wrap") || drop;
+dropArea.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+dropArea.addEventListener("dragleave", (e) => { if (!dropArea.contains(e.relatedTarget)) drop.classList.remove("over"); });
+dropArea.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+$("file").addEventListener("change", () => { const f = $("file").files[0]; if (f) loadFile(f); $("file").value = ""; });
+
+function loadFile(f) {
+  if (busy) return;
+  file = f; result = null; $("download").disabled = true;
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = URL.createObjectURL(f);
+  videoEl = document.createElement("video");
+  videoEl.muted = true; videoEl.playsInline = true; videoEl.preload = "auto"; videoEl.src = objectUrl;
+  $("fileinfo").innerHTML = "<strong>" + escapeHtml(f.name) + "</strong> &middot; loading&hellip;";
+  videoEl.addEventListener("loadedmetadata", () => {
+    $("fileinfo").innerHTML = "<strong>" + escapeHtml(f.name) + "</strong> &middot; " + videoEl.videoWidth + "&times;" + videoEl.videoHeight +
+      " &middot; " + fmtTime(videoEl.duration) + " &middot; " + fmtBytes(f.size);
+    $("convert").disabled = false;
+    log("Loaded " + f.name + " (" + videoEl.videoWidth + "x" + videoEl.videoHeight + ", " + videoEl.duration.toFixed(1) + " s)");
+    refreshStats();
+  }, { once: true });
+  videoEl.addEventListener("error", () => {
+    $("fileinfo").innerHTML = "<strong>" + escapeHtml(f.name) + "</strong> &middot; <span style='color:var(--bad)'>this browser can't play this file</span>";
+    $("convert").disabled = true;
+    log("Could not open this video. Try converting it to MP4 (H.264) or WEBM first.", "e");
+  }, { once: true });
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function seekTo(v, t) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; v.removeEventListener("seeked", finish); resolve(); } };
+    v.addEventListener("seeked", finish);
+    setTimeout(finish, 4000);
+    v.currentTime = t;
+  });
+}
+
+function drawFit(ctx, v, vw, vh, W, H, fit) {
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  if (fit === "stretch") { ctx.drawImage(v, 0, 0, W, H); return; }
+  if (fit === "crop") {
+    const sc = Math.max(W / vw, H / vh), sw = W / sc, sh = H / sc;
+    ctx.drawImage(v, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, W, H); return;
+  }
+  const sc = Math.min(W / vw, H / vh), dw = vw * sc, dh = vh * sc;
+  ctx.drawImage(v, 0, 0, vw, vh, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+
+$("cancel").addEventListener("click", () => { cancelled = true; });
+
+$("convert").addEventListener("click", async () => {
+  if (!videoEl || busy) return;
+  const s = settings();
+  const len = Math.max(0, Math.min(s.max, videoEl.duration - s.start));
+  const N = Math.floor(len * s.FPS);
+  if (N < 1) { log("Nothing to convert: check Start at / Max seconds.", "e"); return; }
+  busy = true; cancelled = false; result = null;
+  $("convert").disabled = true; $("cancel").disabled = false; $("download").disabled = true;
+  $("notice").className = "notice"; $("notice").textContent = "";
+  setPill("Converting", "busy");
+  log(`Converting ${N} frames at ${s.W}x${s.H}, ${s.FPS} FPS, flicker filter ${s.flicker}...`);
+
+  // two-step downscale for big videos keeps detail instead of aliasing
+  const mid = document.createElement("canvas");
+  const midScale = Math.min(1, Math.max(s.W * 4 / videoEl.videoWidth, s.H * 4 / videoEl.videoHeight));
+  mid.width = Math.max(1, Math.round(videoEl.videoWidth * midScale));
+  mid.height = Math.max(1, Math.round(videoEl.videoHeight * midScale));
+  const midCtx = mid.getContext("2d");
+  const cv = document.createElement("canvas"); cv.width = s.W; cv.height = s.H;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+  midCtx.imageSmoothingEnabled = true; midCtx.imageSmoothingQuality = "high";
+  const pv = $("preview"); pv.width = s.W; pv.height = s.H; $("previewEmpty").style.display = "none";
+  $("previewBox").style.aspectRatio = s.W + " / " + s.H;
+  const pctx = pv.getContext("2d");
+  const pImg = pctx.createImageData(s.W, s.H);
+
+  const enc = new DeltaEncoder(s.W, s.H, s.flicker);
+  const colors = new Uint16Array(s.W * s.H);
+  const t0 = performance.now();
+  try {
+    for (let i = 0; i < N; i++) {
+      if (cancelled) throw new Error("cancelled");
+      await seekTo(videoEl, Math.min(videoEl.duration - 0.001, s.start + i / s.FPS));
+      midCtx.drawImage(videoEl, 0, 0, mid.width, mid.height);
+      drawFit(ctx, mid, mid.width, mid.height, s.W, s.H, s.fit);
+      const img = ctx.getImageData(0, 0, s.W, s.H).data;
+      quantize(img, colors);
+      enc.addFrame(colors);
+
+      if (i % 2 === 0 || i === N - 1) {
+        const d = pImg.data;
+        for (let k = 0, j = 0; k < colors.length; k++, j += 4) {
+          const c = enc.shown[k];
+          d[j] = (c >> 8) * 17; d[j + 1] = ((c >> 4) & 15) * 17; d[j + 2] = (c & 15) * 17; d[j + 3] = 255;
+        }
+        pctx.putImageData(pImg, 0, 0);
+        const done = i + 1, el = (performance.now() - t0) / 1000;
+        const projected = enc.body.len / done * N * (4 / 3) * 0.78;
+        $("sSize").textContent = "~" + fmtBytes(projected);
+        $("sSize").className = "v " + sizeClass(projected);
+        $("sSizeS").textContent = "estimated final size";
+        setProgress(done / N, `Frame ${done} / ${N}`, "ETA " + fmtTime(el / done * (N - done)));
+      }
+    }
+    setProgress(1, "Packaging .rbxm...", "Packing");
+    await new Promise(r => setTimeout(r, 30));
+    const stream = enc.finish();
+    const { blob, partCount } = buildVideoDataRbxm(stream, s.W, s.H, s.FPS);
+    result = blob;
+    const el = (performance.now() - t0) / 1000;
+    $("sSize").textContent = fmtBytes(blob.size);
+    $("sSize").className = "v " + sizeClass(blob.size);
+    $("sSizeS").textContent = partCount + " Part modules";
+    setProgress(1, "Done in " + fmtTime(el), "Done");
+    setPill("Done", "done");
+    log(`Done: ${enc.stored} stored frames (${enc.fullCount} full, ${enc.stored - enc.fullCount} delta), ${partCount} parts, ${fmtBytes(blob.size)}.`, "g");
+    if (blob.size > 30 * 1048576) {
+      $("notice").className = "notice warn";
+      $("notice").textContent = "This is a big file. It may freeze Studio when you import it, and players will be slow to join. Try a lower resolution, a shorter clip, or a stronger flicker filter.";
+    } else if (blob.size > 15 * 1048576) {
+      $("notice").className = "notice warn";
+      $("notice").textContent = "Fairly big file. It should import, but players on slow connections or phones will take a while to load it.";
+    }
+    $("download").disabled = false;
+  } catch (e) {
+    if (e.message === "cancelled") { log("Cancelled.", "w"); setPill("Idle"); setProgress(0, "Cancelled", "Idle"); }
+    else { log("Error: " + e.message, "e"); setPill("Error", "err"); }
+  } finally {
+    busy = false; $("convert").disabled = false; $("cancel").disabled = true;
+  }
+});
+
+$("download").addEventListener("click", () => {
+  if (!result) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(result);
+  a.download = "VideoData.rbxm";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  log("Saved VideoData.rbxm");
+});
+
+refreshStats();
+$("jswarn").style.display = "none";
+setPill("Idle");
+</script>
+</body>
+</html>
